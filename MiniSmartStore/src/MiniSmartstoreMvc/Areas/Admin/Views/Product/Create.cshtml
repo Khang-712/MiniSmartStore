@@ -1,0 +1,471 @@
+﻿@model MiniSmartstoreMvc.Models.Product
+
+@{
+    ViewData["Title"] = "Thêm sản phẩm";
+    ViewBag.IsEdit = false;
+}
+
+<div class="admin-product-form-page">
+    <div class="admin-product-form-card">
+        <div class="admin-product-form-header">
+            <div class="admin-product-heading">
+                <a asp-area="Admin"
+                   asp-controller="Product"
+                   asp-action="Index"
+                   class="apf-back"
+                   title="Quay lại"></a>
+
+                <div>
+                    <h1>Thêm sản phẩm</h1>
+                    <p>Tạo sản phẩm mới, thiết lập giá bán, tồn kho, ảnh, danh mục và SEO.</p>
+                </div>
+            </div>
+
+            <div class="admin-product-actions">
+                <button type="submit"
+                        form="productForm"
+                        name="saveMode"
+                        value="save"
+                        class="apf-btn apf-btn-primary">
+                    Lưu
+                </button>
+
+                <button type="submit"
+                        form="productForm"
+                        name="saveMode"
+                        value="continue"
+                        class="apf-btn apf-btn-soft">
+                    Lưu và tiếp tục sửa
+                </button>
+            </div>
+        </div>
+
+        <partial name="_Form" model="Model" />
+    </div>
+</div>
+@* ===== LƯU Ý: MODAL CẢNH BÁO THIẾU THÔNG TIN ===== *@
+<div id="createRequiredModal"
+     class="create-required-overlay">
+
+    <div class="create-required-modal">
+
+        <button type="button"
+                id="createRequiredClose"
+                class="create-required-close">
+            ×
+        </button>
+
+        <h2>Thiếu thông tin sản phẩm</h2>
+
+        <p>
+            Bạn chưa nhập đầy đủ các thông tin bắt buộc.
+        </p>
+
+        <div class="create-required-box">
+
+            <div class="create-required-icon">
+                !
+            </div>
+
+            <div>
+                <strong>Vui lòng nhập đầy đủ:</strong>
+
+                <ul id="createRequiredList"></ul>
+            </div>
+
+        </div>
+
+        <div class="create-required-actions">
+
+            <button type="button"
+                    id="createRequiredCancel"
+                    class="create-required-cancel">
+                Hủy
+            </button>
+
+            <button type="button"
+                    id="createRequiredConfirm"
+                    class="create-required-confirm">
+                Xác nhận
+            </button>
+
+        </div>
+
+    </div>
+
+</div>
+@* ===== KẾT THÚC MODAL CẢNH BÁO THIẾU THÔNG TIN ===== *@
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            initAdminProductTabs();
+            initAdminProductImagePreview();
+            initAdminProductPricePreview();
+            initCreateRequiredValidation();
+        });
+
+        function initAdminProductTabs() {
+            document.querySelectorAll(".apf-tab").forEach(function(button) {
+                button.addEventListener("click", function() {
+                    const tab = this.dataset.tab;
+
+                    document.querySelectorAll(".apf-tab").forEach(x => x.classList.remove("active"));
+                    document.querySelectorAll(".apf-panel").forEach(x => x.classList.remove("active"));
+
+                    this.classList.add("active");
+                    document.getElementById(tab)?.classList.add("active");
+                });
+            });
+        }
+
+        function initAdminProductImagePreview() {
+            const input = document.getElementById("imageFile");
+            const preview = document.getElementById("previewImage");
+
+            if (!input || !preview) return;
+
+            input.addEventListener("change", function(event) {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                preview.src = URL.createObjectURL(file);
+            });
+        }
+
+        function initAdminProductPricePreview() {
+            const priceInput = document.getElementById("Price");
+            const oldPriceInput = document.getElementById("OldPrice");
+            const pricePreview = document.getElementById("apfPricePreview");
+            const oldPricePreview = document.getElementById("apfOldPricePreview");
+            const discountPreview = document.getElementById("apfDiscountPreview");
+
+            function format(value) {
+                const number = Number(value || 0);
+                return number.toLocaleString("vi-VN") + " đ";
+            }
+
+            function update() {
+                const price = Number(priceInput?.value || 0);
+                const oldPrice = Number(oldPriceInput?.value || 0);
+
+                if (pricePreview) pricePreview.textContent = format(price);
+                if (oldPricePreview) oldPricePreview.textContent = oldPrice > 0 ? format(oldPrice) : "Chưa có";
+
+                let discount = 0;
+                if (oldPrice > price && oldPrice > 0) {
+                    discount = Math.round(((oldPrice - price) / oldPrice) * 100);
+                }
+
+                if (discountPreview) discountPreview.textContent = discount + "%";
+            }
+
+            priceInput?.addEventListener("input", update);
+            oldPriceInput?.addEventListener("input", update);
+            update();
+        }
+        // ===== LƯU Ý: VALIDATION RIÊNG CHO CREATE PRODUCT =====
+        function initCreateRequiredValidation() {
+
+            const form =
+                document.getElementById("productForm");
+
+            const modal =
+                document.getElementById("createRequiredModal");
+
+            const missingList =
+                document.getElementById("createRequiredList");
+
+            const cancelButton =
+                document.getElementById("createRequiredCancel");
+
+            const confirmButton =
+                document.getElementById("createRequiredConfirm");
+
+            const closeButton =
+                document.getElementById("createRequiredClose");
+
+
+            if (!form || !modal) {
+                return;
+            }
+
+
+            const requiredFields = [
+                {
+                    id: "ProductCode",
+                    name: "Mã sản phẩm",
+                    type: "text"
+                },
+                {
+                    id: "Name",
+                    name: "Tên sản phẩm",
+                    type: "text"
+                },
+                {
+                    id: "StockQuantity",
+                    name: "Số lượng tồn kho",
+                    type: "number"
+                },
+                {
+                    id: "Price",
+                    name: "Giá bán",
+                    type: "number"
+                },
+                {
+                    id: "CategoryId",
+                    name: "Danh mục",
+                    type: "select"
+                }
+            ];
+
+
+            let currentMissing = [];
+
+
+            function isInvalid(definition) {
+
+                const field =
+                    document.getElementById(definition.id);
+
+                if (!field) {
+                    return false;
+                }
+
+
+                const value =
+                    (field.value || "").trim();
+
+
+                if (definition.type === "text") {
+                    return value === "";
+                }
+
+
+                if (definition.type === "number") {
+
+                    if (value === "") {
+                        return true;
+                    }
+
+                    const number =
+                        Number(value);
+
+                    return (
+                        !Number.isFinite(number) ||
+                        number <= 0
+                    );
+                }
+
+
+                if (definition.type === "select") {
+                    return (
+                        value === "" ||
+                        Number(value) <= 0
+                    );
+                }
+
+
+                return false;
+            }
+
+
+            function getMissing() {
+
+                return requiredFields.filter(
+                    field => isInvalid(field)
+                );
+            }
+
+
+            function showModal(fields) {
+
+                currentMissing = fields;
+
+                missingList.innerHTML = "";
+
+
+                fields.forEach(function(field) {
+
+                    const li =
+                        document.createElement("li");
+
+                    li.textContent =
+                        field.name;
+
+                    missingList.appendChild(li);
+                });
+
+
+                modal.classList.add("show");
+            }
+
+
+            function hideModal() {
+
+                modal.classList.remove("show");
+            }
+
+
+            function clearErrors() {
+
+                requiredFields.forEach(function(definition) {
+
+                    const field =
+                        document.getElementById(
+                            definition.id
+                        );
+
+                    field?.classList.remove(
+                        "create-required-error"
+                    );
+
+                    field
+                        ?.closest(".apf-money")
+                        ?.classList.remove(
+                            "create-required-money-error"
+                        );
+                });
+            }
+
+
+            function markErrors(fields) {
+
+                clearErrors();
+
+
+                fields.forEach(function(definition) {
+
+                    const field =
+                        document.getElementById(
+                            definition.id
+                        );
+
+                    if (!field) {
+                        return;
+                    }
+
+
+                    field.classList.add(
+                        "create-required-error"
+                    );
+
+
+                    field
+                        .closest(".apf-money")
+                        ?.classList.add(
+                            "create-required-money-error"
+                        );
+                });
+
+
+                if (fields.length === 0) {
+                    return;
+                }
+
+
+                const firstField =
+                    document.getElementById(
+                        fields[0].id
+                    );
+
+
+                const panel =
+                    firstField?.closest(".apf-panel");
+
+
+                if (panel?.id) {
+
+                    document.querySelector(
+                        '.apf-tab[data-tab="' +
+                        panel.id +
+                        '"]'
+                    )?.click();
+                }
+
+
+                setTimeout(function() {
+
+                    firstField?.scrollIntoView({
+                        behavior: "smooth",
+                        block: "center"
+                    });
+
+                    firstField?.focus();
+
+                }, 100);
+            }
+
+
+            form.addEventListener(
+                "submit",
+                function(event) {
+
+                    const missing =
+                        getMissing();
+
+
+                    if (missing.length === 0) {
+                        clearErrors();
+                        return;
+                    }
+
+
+                    event.preventDefault();
+
+                    event.stopPropagation();
+
+                    showModal(missing);
+
+                },
+                true
+            );
+
+
+            cancelButton?.addEventListener(
+                "click",
+                function() {
+
+                    window.location.href =
+                        '@Url.Action(
+                                            "Index",
+                                            "Product",
+                                    new { area = "Admin" }
+                                            )';
+                }
+            );
+
+
+            confirmButton?.addEventListener(
+                "click",
+                function() {
+
+                    hideModal();
+
+                    markErrors(
+                        currentMissing
+                    );
+                }
+            );
+
+
+            closeButton?.addEventListener(
+                "click",
+                hideModal
+            );
+
+
+            modal.addEventListener(
+                "click",
+                function(event) {
+
+                    if (event.target === modal) {
+                        hideModal();
+                    }
+                }
+            );
+        }
+        // ===== KẾT THÚC VALIDATION RIÊNG CHO CREATE PRODUCT =====
+</script>
+}

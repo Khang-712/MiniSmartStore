@@ -1,0 +1,608 @@
+﻿@model List<MiniSmartstoreMvc.ViewModels.AdminCategoryListItemViewModel>
+
+@{
+    ViewData["Title"] = "Quản lý danh mục";
+
+    var search = ViewBag.Search as string;
+
+    var currentPage = ViewBag.Page is int p ? p : 1;
+    var currentPageSize = ViewBag.PageSize is int ps ? ps : 25;
+    var totalItems = ViewBag.TotalItems is int ti ? ti : Model.Count;
+    var totalPages = ViewBag.TotalPages is int tp && tp > 0 ? tp : 1;
+
+    var previousPage = currentPage > 1 ? currentPage - 1 : 1;
+    var nextPage = currentPage < totalPages ? currentPage + 1 : totalPages;
+}
+
+<div class="admin-category-page">
+    <div class="admin-category-card">
+
+        <div class="admin-category-header">
+            <div class="admin-category-title-group">
+                <div>
+                    <h1>Quản lý danh mục</h1>
+                    <p>Thêm, chỉnh sửa, ẩn/hiện và sắp xếp danh mục hiển thị ngoài cửa hàng.</p>
+                </div>
+
+                <div class="admin-category-view-switch">
+
+                    <a asp-area="Admin"
+                       asp-controller="Category"
+                       asp-action="List"
+                       class="admin-view-btn active"
+                       title="Xem dạng danh sách">
+
+                        <span class="category-list-icon" aria-hidden="true">
+                            <span class="category-list-icon-row">
+                                <i></i>
+                                <b></b>
+                            </span>
+                            <span class="category-list-icon-row">
+                                <i></i>
+                                <b></b>
+                            </span>
+                            <span class="category-list-icon-row">
+                                <i></i>
+                                <b></b>
+                            </span>
+                        </span>
+
+                    </a>
+
+                    <a asp-area="Admin"
+                       asp-controller="Category"
+                       asp-action="Tree"
+                       class="admin-view-btn"
+                       title="Xem dạng cây danh mục">
+
+                        <span class="category-tree-icon" aria-hidden="true">
+                            <span class="tree-top-node"></span>
+                            <span class="tree-stem"></span>
+
+                            <span class="tree-branch tree-branch-left"></span>
+                            <span class="tree-branch tree-branch-right"></span>
+
+                            <span class="tree-node tree-node-left"></span>
+                            <span class="tree-node tree-node-center"></span>
+                            <span class="tree-node tree-node-right"></span>
+                        </span>
+
+                    </a>
+
+                </div>
+            </div>
+        </div>
+
+        @if (TempData["Success"] != null)
+        {
+            <div class="admin-alert admin-alert-success">
+                @TempData["Success"]
+            </div>
+        }
+
+        @if (TempData["Error"] != null)
+        {
+            <div class="admin-alert admin-alert-danger">
+                @TempData["Error"]
+            </div>
+        }
+
+        <div class="admin-category-toolbar smartstore-style">
+            <button type="button"
+                    class="admin-filter-btn"
+                    id="categoryFilterToggle"
+                    title="Bộ lọc">
+                <span class="admin-css-icon admin-icon-filter"></span>
+            </button>
+
+            <a asp-area="Admin"
+               asp-controller="Category"
+               asp-action="Create"
+               class="admin-add-inline-btn">
+                <span>+</span>
+                <span>Thêm mới...</span>
+            </a>
+        </div>
+
+        <div class="admin-filter-panel" id="categoryFilterPanel">
+            <form asp-area="Admin"
+                  asp-controller="Category"
+                  asp-action="List"
+                  method="get">
+
+                <div class="admin-filter-panel-title">
+                    Tìm kiếm danh mục
+                </div>
+
+                <label>Tên danh mục hoặc alias</label>
+
+                <input type="text"
+                       name="search"
+                       value="@search"
+                       placeholder="Nhập từ khóa..." />
+
+                <input type="hidden" name="pageSize" value="@currentPageSize" />
+
+                <div class="admin-filter-actions">
+                    <button type="submit">
+                        Tìm kiếm
+                    </button>
+
+                    <a asp-area="Admin"
+                       asp-controller="Category"
+                       asp-action="List">
+                        Xóa lọc
+                    </a>
+                </div>
+            </form>
+        </div>
+
+        <div class="admin-category-table-wrap">
+            <table class="admin-category-table">
+                <thead>
+                    <tr>
+                        <th>Tên danh mục</th>
+                        <th>Đường dẫn đầy đủ</th>
+                        <th>Alias</th>
+                        <th>Sản phẩm</th>
+                        <th>Trạng thái</th>
+                        <th>Thứ tự</th>
+                        <th class="text-end">Thao tác</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    @if (Model != null && Model.Any())
+                    {
+                        foreach (var item in Model)
+                        {
+                            <tr>
+                                <td>
+                                    <div class="admin-cat-name-cell" style="--level:@item.Level">
+                                        <a asp-area="Admin"
+                                           asp-controller="Category"
+                                           asp-action="Edit"
+                                           asp-route-id="@item.Id"
+                                           class="admin-cat-name">
+                                            @item.Name
+                                        </a>
+
+                                        @if (!item.IncludeInMenu)
+                                        {
+                                            <span class="admin-small-tag muted">
+                                                Ẩn menu
+                                            </span>
+                                        }
+
+                                        @if (item.ShowOnHomePage)
+                                        {
+                                            <span class="admin-small-tag">
+                                                Trang chủ
+                                            </span>
+                                        }
+                                    </div>
+                                </td>
+
+                                <td>
+                                    <span class="admin-cat-path">
+                                        @item.FullName
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="admin-cat-alias">
+                                        @(string.IsNullOrWhiteSpace(item.Alias) ? "Chưa có" : item.Alias)
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <span class="admin-count-badge">
+                                        @item.ProductCount
+                                    </span>
+                                </td>
+
+                                <td>
+                                    <form asp-area="Admin"
+                                          asp-controller="Category"
+                                          asp-action="TogglePublished"
+                                          asp-route-id="@item.Id"
+                                          method="post">
+                                        @Html.AntiForgeryToken()
+
+                                        <button type="submit"
+                                                class="admin-status-pill @(item.IsActive ? "is-on" : "is-off")">
+                                            @(item.IsActive ? "Đang hiển thị" : "Đang ẩn")
+                                        </button>
+                                    </form>
+                                </td>
+
+                                <td>
+                                    <span class="admin-order-number">
+                                        @item.DisplayOrder
+                                    </span>
+                                </td>
+
+                                <td class="text-end">
+                                    <div class="admin-row-actions">
+                                        <a asp-area="Admin"
+                                           asp-controller="Category"
+                                           asp-action="Edit"
+                                           asp-route-id="@item.Id"
+                                           class="admin-icon-btn">
+                                            Sửa
+                                        </a>
+
+                                        <button type="button"
+                                                class="admin-icon-btn danger btn-open-category-delete"
+                                                data-id="@item.Id"
+                                                data-name="@item.Name">
+                                            Xóa
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    }
+                    else
+                    {
+                        <tr>
+                            <td colspan="7" class="admin-empty-row">
+                                Không tìm thấy danh mục nào.
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+
+        <div class="admin-category-grid-footer">
+            <div class="admin-grid-left">
+                <a asp-area="Admin"
+                   asp-controller="Category"
+                   asp-action="List"
+                   asp-route-search="@search"
+                   asp-route-page="@currentPage"
+                   asp-route-pageSize="@currentPageSize"
+                   class="admin-grid-icon-btn"
+                   title="Làm mới">
+                    <span class="admin-css-icon admin-icon-refresh"></span>
+                </a>
+
+                <a asp-area="Admin"
+                   asp-controller="Category"
+                   asp-action="List"
+                   asp-route-search="@search"
+                   asp-route-page="1"
+                   asp-route-pageSize="@currentPageSize"
+                   class="admin-grid-icon-btn @(currentPage <= 1 ? "disabled" : "")">
+                    «
+                </a>
+
+                <a asp-area="Admin"
+                   asp-controller="Category"
+                   asp-action="List"
+                   asp-route-search="@search"
+                   asp-route-page="@previousPage"
+                   asp-route-pageSize="@currentPageSize"
+                   class="admin-grid-icon-btn @(currentPage <= 1 ? "disabled" : "")">
+                    ‹
+                </a>
+
+                <span class="admin-grid-page-number">
+                    @currentPage
+                </span>
+
+                <a asp-area="Admin"
+                   asp-controller="Category"
+                   asp-action="List"
+                   asp-route-search="@search"
+                   asp-route-page="@nextPage"
+                   asp-route-pageSize="@currentPageSize"
+                   class="admin-grid-icon-btn @(currentPage >= totalPages ? "disabled" : "")">
+                    ›
+                </a>
+
+                <a asp-area="Admin"
+                   asp-controller="Category"
+                   asp-action="List"
+                   asp-route-search="@search"
+                   asp-route-page="@totalPages"
+                   asp-route-pageSize="@currentPageSize"
+                   class="admin-grid-icon-btn @(currentPage >= totalPages ? "disabled" : "")">
+                    »
+                </a>
+            </div>
+
+            <div class="admin-grid-right">
+                <span>
+                    Hiển thị @Model.Count / @totalItems danh mục
+                </span>
+
+                <form asp-area="Admin"
+                      asp-controller="Category"
+                      asp-action="List"
+                      method="get"
+                      class="admin-page-size-form">
+
+                    <input type="hidden" name="search" value="@search" />
+                    <input type="hidden" name="page" value="1" />
+
+                    <select name="pageSize" onchange="this.form.submit()">
+                        <option value="10" selected="@(currentPageSize == 10)">10 dòng / trang</option>
+                        <option value="25" selected="@(currentPageSize == 25)">25 dòng / trang</option>
+                        <option value="50" selected="@(currentPageSize == 50)">50 dòng / trang</option>
+                    </select>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .category-delete-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 99999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        background: rgba(0, 0, 0, 0.45);
+        padding: 20px;
+    }
+
+        .category-delete-overlay.show {
+            display: flex;
+        }
+
+    .category-delete-modal {
+        position: relative;
+        width: 540px;
+        max-width: 100%;
+        background: #fff;
+        border-radius: 6px;
+        padding: 30px 32px 26px;
+        box-shadow: 0 14px 45px rgba(0, 0, 0, 0.25);
+    }
+
+        .category-delete-modal h2 {
+            margin: 0 0 22px;
+            font-size: 24px;
+            font-weight: 600;
+            color: #333;
+        }
+
+    .category-delete-question {
+        margin: 0 0 20px;
+        font-size: 16px;
+        color: #555;
+    }
+
+    .category-delete-close {
+        position: absolute;
+        top: 14px;
+        right: 18px;
+        width: 36px;
+        height: 36px;
+        border: none;
+        background: transparent;
+        font-size: 30px;
+        color: #999;
+        cursor: pointer;
+    }
+
+        .category-delete-close:hover {
+            color: #333;
+        }
+
+    .category-delete-info {
+        padding: 16px;
+        border: 1px solid #e5e7eb;
+        border-radius: 6px;
+        background: #f8fafc;
+        margin-bottom: 16px;
+    }
+
+        .category-delete-info strong {
+            display: block;
+            margin-bottom: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            color: #222;
+        }
+
+    .category-delete-count {
+        font-size: 14px;
+        color: #64748b;
+    }
+
+    .category-delete-warning {
+        padding: 12px 14px;
+        margin-bottom: 26px;
+        border-radius: 5px;
+        background: #fff7ed;
+        color: #9a3412;
+        font-size: 14px;
+        line-height: 1.5;
+    }
+
+    .category-delete-actions {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+    }
+
+        .category-delete-actions form {
+            margin: 0;
+        }
+
+    .category-delete-cancel {
+        min-width: 90px;
+        height: 44px;
+        border: none;
+        background: transparent;
+        font-size: 16px;
+        color: #777;
+        cursor: pointer;
+    }
+
+    .category-delete-confirm {
+        min-width: 120px;
+        height: 44px;
+        border: none;
+        border-radius: 3px;
+        background: #ee4d2d;
+        color: white;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+    }
+
+        .category-delete-confirm:hover {
+            background: #d94325;
+        }
+</style>
+
+<!-- Modal xác nhận xóa danh mục -->
+<div id="categoryDeleteModal" class="category-delete-overlay">
+    <div class="category-delete-modal">
+
+        <button type="button"
+                id="closeCategoryDeleteModal"
+                class="category-delete-close">
+            ×
+        </button>
+
+        <h2>Xóa danh mục</h2>
+
+        <p>Bạn có chắc muốn xóa danh mục này?</p>
+
+        <div class="category-delete-info">
+            <strong id="categoryDeleteName"></strong>
+        </div>
+
+        <div class="category-delete-warning">
+            Lưu ý: Không thể xóa danh mục đang chứa sản phẩm hoặc danh mục con.
+        </div>
+
+        <div class="category-delete-actions">
+
+            <button type="button"
+                    id="cancelCategoryDeleteModal"
+                    class="category-delete-cancel">
+                Hủy
+            </button>
+
+            <form asp-area="Admin"
+                  asp-controller="Category"
+                  asp-action="Delete"
+                  method="post">
+
+                @Html.AntiForgeryToken()
+
+                <input type="hidden"
+                       id="categoryDeleteId"
+                       name="id" />
+
+                <button type="submit"
+                        class="category-delete-confirm">
+                    Xác nhận
+                </button>
+            </form>
+
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+
+            // ================================
+            // BỘ LỌC DANH MỤC
+            // ================================
+            const toggle = document.getElementById("categoryFilterToggle");
+            const panel = document.getElementById("categoryFilterPanel");
+
+            if (toggle && panel) {
+
+                toggle.addEventListener("click", function () {
+                    panel.classList.toggle("is-open");
+                });
+
+                document.addEventListener("click", function (event) {
+                    if (!panel.contains(event.target) &&
+                        !toggle.contains(event.target)) {
+
+                        panel.classList.remove("is-open");
+                    }
+                });
+            }
+
+
+            // ================================
+            // MODAL XÓA DANH MỤC
+            // ================================
+            const categoryDeleteModal =
+                document.getElementById("categoryDeleteModal");
+
+            const categoryDeleteId =
+                document.getElementById("categoryDeleteId");
+
+            const categoryDeleteName =
+                document.getElementById("categoryDeleteName");
+
+            const closeCategoryDeleteModal =
+                document.getElementById("closeCategoryDeleteModal");
+
+            const cancelCategoryDeleteModal =
+                document.getElementById("cancelCategoryDeleteModal");
+
+
+            document.querySelectorAll(".btn-open-category-delete")
+                .forEach(function (button) {
+
+                    button.addEventListener("click", function () {
+
+                        categoryDeleteId.value = this.dataset.id;
+                        categoryDeleteName.textContent = this.dataset.name;
+
+                        categoryDeleteModal.classList.add("show");
+                    });
+
+                });
+
+
+            function hideCategoryDeleteModal() {
+                categoryDeleteModal.classList.remove("show");
+            }
+
+
+            if (closeCategoryDeleteModal) {
+                closeCategoryDeleteModal.addEventListener(
+                    "click",
+                    hideCategoryDeleteModal
+                );
+            }
+
+            if (cancelCategoryDeleteModal) {
+                cancelCategoryDeleteModal.addEventListener(
+                    "click",
+                    hideCategoryDeleteModal
+                );
+            }
+
+
+            if (categoryDeleteModal) {
+                categoryDeleteModal.addEventListener("click", function (event) {
+
+                    if (event.target === categoryDeleteModal) {
+                        hideCategoryDeleteModal();
+                    }
+
+                });
+            }
+
+        });
+    </script>
+}
